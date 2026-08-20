@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Θυρίδα Οικογένειας — Διαχείριση</title>
+<style>
+  :root{
+    --bg:#0A0C0F;
+    --panel:#14171C;
+    --panel-2:#191D23;
+    --border:#262B33;
+    --text:#E8E6E0;
+    --muted:#8A8F98;
+    --brass:#C9A15A;
+    --brass-dim:#8C7239;
+    --danger:#C97569;
+    --success:#6FA083;
+    --serif: Georgia, 'Times New Roman', ui-serif, serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    --mono: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 26px; border-bottom:1px solid var(--border);
+    background:var(--panel-2);
+    flex-wrap:wrap; gap:12px;
+  }
+  header h1{ font-family:var(--serif); font-weight:400; font-size:18.5px; margin:0; }
+  header .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+  button{ font-family:var(--sans); cursor:pointer; }
+  .btn{
+    background:transparent; border:1px solid var(--border); color:var(--text);
+    font-size:12.5px; padding:9px 14px; border-radius:8px;
+    transition:border-color .2s ease;
+  }
+  .btn:hover{ border-color:var(--brass-dim); }
+  .btn-primary{
+    background:var(--brass); color:#1A1305; border:none; font-weight:600;
+  }
+  .btn-primary:hover{ background:#d6ac63; }
+  .btn-danger{ color:var(--danger); }
+
+  .layout{ display:flex; min-height:calc(100vh - 63px); }
+  .sidebar{
+    width:260px; border-right:1px solid var(--border); background:var(--panel);
+    padding:16px; flex-shrink:0;
+  }
+  .sidebar-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .sidebar-head span{ font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
+  .member-item{
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+    padding:10px 12px; border-radius:8px; cursor:pointer; margin-bottom:6px;
+    border:1px solid transparent; font-size:13.5px;
+  }
+  .member-item:hover{ background:var(--panel-2); }
+  .member-item.active{ background:var(--panel-2); border-color:var(--brass-dim); }
+  .member-item .del{ color:var(--muted); font-size:11px; opacity:.6; }
+  .member-item .del:hover{ color:var(--danger); opacity:1; }
+  .empty-note{ color:var(--muted); font-size:12.5px; padding:10px 2px; line-height:1.6; }
+
+  .content{ flex:1; padding:26px 32px; max-width:640px; }
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:11.5px; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .field input, .field textarea{
+    width:100%; background:#0D0F13; border:1px solid var(--border); color:var(--text);
+    font-family:var(--sans); font-size:14px; border-radius:8px; padding:10px 12px; outline:none;
+  }
+  .field input:focus, .field textarea:focus{ border-color:var(--brass-dim); }
+  .field textarea{ resize:vertical; min-height:70px; font-family:var(--sans); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+  .subsection{ margin-top:26px; padding-top:20px; border-top:1px solid var(--border); }
+  .subsection-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .subsection-head h3{ font-size:13px; margin:0; font-weight:600; letter-spacing:.3px; }
+
+  .repeat-row{ display:flex; gap:8px; margin-bottom:8px; align-items:center; }
+  .repeat-row input{ flex:1; }
+  .repeat-row .rm{
+    flex-shrink:0; background:transparent; border:1px solid var(--border); color:var(--muted);
+    border-radius:7px; padding:8px 10px; font-size:12px;
+  }
+  .repeat-row .rm:hover{ color:var(--danger); border-color:var(--danger); }
+
+  .placeholder{ color:var(--muted); font-size:14px; padding:60px 0; text-align:center; }
+
+  #status-msg{ font-size:12.5px; margin-top:10px; min-height:18px; }
+  #status-msg.ok{ color:var(--success); }
+  #status-msg.warn{ color:var(--danger); }
+
+  /* modal */
+  .overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
+    align-items:center; justify-content:center; z-index:50;
+  }
+  .overlay.showing{ display:flex; }
+  .modal{
+    background:var(--panel-2); border:1px solid var(--border); border-radius:14px;
+    padding:26px; width:100%; max-width:340px;
+  }
+  .modal h3{ font-size:15px; margin:0 0 6px; font-weight:500; }
+  .modal p{ font-size:12.5px; color:var(--muted); margin:0 0 16px; line-height:1.5; }
+  .modal input{
+    width:100%; background:#0D0F13; border:1px solid var(--border); color:var(--text);
+    font-size:14px; border-radius:8px; padding:10px 12px; outline:none; margin-bottom:16px;
+  }
+  .modal input:focus{ border-color:var(--brass-dim); }
+  .modal-actions{ display:flex; gap:10px; justify-content:flex-end; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Θυρίδα Οικογένειας — Διαχείριση</h1>
+  <div class="actions">
+    <button class="btn" id="btn-load-backup">Φόρτωση αντιγράφου</button>
+    <button class="btn" id="btn-save-backup">Αποθήκευση αντιγράφου</button>
+    <button class="btn" id="btn-export-entries">Εξαγωγή entries.json</button>
+    <button class="btn btn-primary" id="btn-export">Δημιουργία vault.html</button>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <span>Μέλη</span>
+      <button class="btn" id="btn-add-member" style="padding:5px 10px;">+ Νέο</button>
+    </div>
+    <div id="member-list"></div>
+    <p class="empty-note">Το «Όνομα» είναι μόνο για δική σας αναφορά εδώ — δεν αποθηκεύεται στο τελικό vault.html.</p>
+  </div>
+
+  <div class="content" id="content">
+    <div class="placeholder">Επιλέξτε ή προσθέστε ένα μέλος από αριστερά.</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="modal-title">Κωδικός</h3>
+    <p id="modal-desc"></p>
+    <input type="password" id="modal-input" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn" id="modal-cancel">Άκυρο</button>
+      <button class="btn btn-primary" id="modal-ok">Συνέχεια</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept="application/json" style="display:none;">
+
+<script>
+/* ================= EMBEDDED VAULT TEMPLATE (kept in sync with vault.html) ================= */
+const VAULT_TEMPLATE = `<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Θυρίδα Οικογένειας</title>
+<style>
+  :root{
+    --bg:#0A0C0F;
+    --panel:#14171C;
+    --panel-2:#191D23;
+    --border:#262B33;
+    --text:#E8E6E0;
+    --muted:#8A8F98;
+    --brass:#C9A15A;
+    --brass-dim:#8C7239;
+    --danger:#C97569;
+    --success:#6FA083;
+    --serif: Georgia, 'Times New Roman', ui-serif, serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    --mono: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    background: radial-gradient(ellipse 900px 600px at 50% -10%, #1a1e25 0%, var(--bg) 55%);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .stage{ width:100%; max-width:460px; position:relative; }
+
+  /* ---------- LOGIN ---------- */
+  #login-card{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:44px 36px 36px;
+    text-align:center;
+    box-shadow:0 30px 60px -25px rgba(0,0,0,.6);
+    transition:opacity .5s ease, transform .5s ease, filter .5s ease;
+  }
+  #login-card.hiding{ opacity:0; transform:scale(.96); filter:blur(4px); pointer-events:none; }
+
+  .dial-wrap{ display:flex; justify-content:center; margin-bottom:22px; }
+  .dial{ width:132px; height:132px; }
+  .dial-ring{ transform-origin:66px 66px; }
+  @media (prefers-reduced-motion: no-preference){
+    .dial-ring{ animation:spin 90s linear infinite; }
+    .dial.unlocking .dial-ring{ animation:spinFast 1.1s cubic-bezier(.2,.7,.3,1) forwards; }
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  @keyframes spinFast{ to{ transform:rotate(1080deg); } }
+  .dial.shake{ animation:shake .4s ease; }
+  @keyframes shake{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-6px); }
+    40%{ transform:translateX(5px); }
+    60%{ transform:translateX(-4px); }
+    80%{ transform:translateX(3px); }
+  }
+
+  h1{ font-family:var(--serif); font-weight:400; font-size:23px; letter-spacing:.3px; margin:0 0 6px; }
+  .sub{ color:var(--muted); font-size:13.5px; margin:0 0 26px; }
+
+  #code-input{
+    width:100%;
+    background:#0D0F13;
+    border:1px solid var(--border);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:20px;
+    letter-spacing:4px;
+    text-align:center;
+    border-radius:10px;
+    padding:14px 12px;
+    outline:none;
+    transition:border-color .2s ease;
+  }
+  #code-input::placeholder{ color:#4E545F; letter-spacing:1px; font-family:var(--sans); font-size:13px; }
+  #code-input:focus{ border-color:var(--brass-dim); }
+
+  #unlock-btn{
+    margin-top:16px;
+    width:100%;
+    background:var(--brass);
+    color:#1A1305;
+    border:none;
+    border-radius:10px;
+    padding:13px;
+    font-size:14.5px;
+    font-weight:600;
+    letter-spacing:.2px;
+    cursor:pointer;
+    transition:background .2s ease, transform .1s ease;
+  }
+  #unlock-btn:hover{ background:#d6ac63; }
+  #unlock-btn:active{ transform:translateY(1px); }
+  #unlock-btn:disabled{ opacity:.55; cursor:default; }
+
+  #error-msg{
+    min-height:20px;
+    color:var(--danger);
+    font-size:13px;
+    margin-top:14px;
+  }
+
+  .footnote{ margin-top:22px; color:#565C66; font-size:11.5px; line-height:1.5; }
+
+  /* ---------- VAULT ---------- */
+  #vault-view{
+    display:none;
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:30px 28px 26px;
+    box-shadow:0 30px 60px -25px rgba(0,0,0,.6);
+    opacity:0;
+    transform:translateY(8px);
+    transition:opacity .5s ease .15s, transform .5s ease .15s;
+  }
+  #vault-view.showing{ display:block; }
+  #vault-view.in{ opacity:1; transform:translateY(0); }
+
+  .vault-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+  .vault-header h2{ font-family:var(--serif); font-weight:400; font-size:19px; margin:0; }
+  #lock-btn{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--muted);
+    font-size:12.5px;
+    padding:7px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    transition:border-color .2s ease, color .2s ease;
+  }
+  #lock-btn:hover{ border-color:var(--brass-dim); color:var(--text); }
+
+  .section{ margin-bottom:22px; }
+  .section:last-child{ margin-bottom:0; }
+  .section-label{
+    font-size:11px; letter-spacing:1.2px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:10px;
+  }
+
+  .field-row{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:#0D0F13; border:1px solid var(--border); border-radius:10px;
+    padding:11px 13px; margin-bottom:8px;
+  }
+  .field-row .k{ font-size:12px; color:var(--muted); min-width:64px; }
+  .field-row .v{ font-family:var(--mono); font-size:14.5px; letter-spacing:.3px; word-break:break-all; text-align:right; flex:1; }
+  .copy-btn{
+    flex-shrink:0;
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+    font-size:11px; padding:5px 9px; border-radius:7px; cursor:pointer;
+    transition:border-color .2s ease, color .2s ease;
+  }
+  .copy-btn:hover{ border-color:var(--brass-dim); color:var(--brass); }
+  .copy-btn.copied{ color:var(--success); border-color:var(--success); }
+
+  .file-item{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:#0D0F13; border:1px solid var(--border); border-radius:10px;
+    padding:11px 13px; margin-bottom:8px;
+  }
+  .file-item .name{ font-size:13.5px; }
+  .file-item a{
+    flex-shrink:0; color:#1A1305; background:var(--brass); text-decoration:none;
+    font-size:11.5px; font-weight:600; padding:6px 11px; border-radius:7px;
+  }
+  .file-item a:hover{ background:#d6ac63; }
+
+  .empty-hint{ color:#565C66; font-size:12.5px; padding:4px 2px; }
+
+  .notes-box{
+    background:#0D0F13; border:1px solid var(--border); border-radius:10px;
+    padding:13px; font-size:13.5px; line-height:1.6; color:#C7C4BC; white-space:pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <div id="login-card">
+    <div class="dial-wrap">
+      <svg class="dial" id="dial" viewBox="0 0 132 132">
+        <circle cx="66" cy="66" r="58" fill="none" stroke="#262B33" stroke-width="1.5"/>
+        <g class="dial-ring" id="dial-ring" stroke="#3A4049" stroke-width="1.5">
+          <!-- tick marks -->
+          <g id="ticks"></g>
+        </g>
+        <circle cx="66" cy="66" r="40" fill="#0D0F13" stroke="#262B33" stroke-width="1"/>
+        <path d="M66 30 L70 40 L62 40 Z" fill="#C9A15A"/>
+      </svg>
+    </div>
+    <h1>Θυρίδα Οικογένειας</h1>
+    <p class="sub">Πληκτρολογήστε τον προσωπικό σας κωδικό</p>
+    <input id="code-input" type="password" inputmode="text" placeholder="Κωδικός" autocomplete="off" autofocus>
+    <button id="unlock-btn">Άνοιγμα</button>
+    <div id="error-msg"></div>
+    <p class="footnote">Κάθε κωδικός ανοίγει μόνο τη δική του θυρίδα. Τα δεδομένα αποκρυπτογραφούνται τοπικά, στη συσκευή σας.</p>
+  </div>
+
+  <div id="vault-view">
+    <div class="vault-header">
+      <h2>Η θυρίδα σας</h2>
+      <button id="lock-btn">Κλείδωμα</button>
+    </div>
+
+    <div class="section" id="fields-section">
+      <div class="section-label">Στοιχεία</div>
+      <div id="fields-list"></div>
+    </div>
+
+    <div class="section" id="files-section">
+      <div class="section-label">Αρχεία</div>
+      <div id="files-list"></div>
+    </div>
+
+    <div class="section" id="notes-section" style="display:none;">
+      <div class="section-label">Σημειώσεις</div>
+      <div class="notes-box" id="notes-box"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================= DATA (replaced by the admin tool on export) ================= */
+const VAULT_ENTRIES = /*__ENTRIES__*/[];
+/* ================================================================================ */
+
+const PBKDF2_ITERATIONS = 250000;
+
+// ---- draw dial ticks ----
+(function drawTicks(){
+  const g = document.getElementById('ticks');
+  const cx = 66, cy = 66, r1 = 50, r2 = 56;
+  for(let i=0;i<40;i++){
+    const a = (i/40) * Math.PI * 2;
+    const x1 = cx + r1*Math.sin(a), y1 = cy - r1*Math.cos(a);
+    const x2 = cx + r2*Math.sin(a), y2 = cy - r2*Math.cos(a);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    g.appendChild(line);
+  }
+})();
+
+// ---- base64 helpers ----
+function b64ToBytes(b64){
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+async function deriveKey(code, saltB64){
+  const enc = new TextEncoder();
+  const salt = b64ToBytes(saltB64);
+  const baseKey = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt, iterations:PBKDF2_ITERATIONS, hash:'SHA-256' },
+    baseKey,
+    { name:'AES-GCM', length:256 },
+    false,
+    ['decrypt']
+  );
+}
+
+async function tryDecrypt(entry, code){
+  try{
+    const key = await deriveKey(code, entry.salt);
+    const iv = b64ToBytes(entry.iv);
+    const ct = b64ToBytes(entry.ct);
+    const plainBuf = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+    const json = new TextDecoder().decode(plainBuf);
+    return JSON.parse(json);
+  }catch(e){
+    return null;
+  }
+}
+
+// ---- UI wiring ----
+const loginCard = document.getElementById('login-card');
+const vaultView = document.getElementById('vault-view');
+const codeInput = document.getElementById('code-input');
+const unlockBtn = document.getElementById('unlock-btn');
+const errorMsg = document.getElementById('error-msg');
+const dial = document.getElementById('dial');
+
+let attempts = 0;
+
+async function attemptUnlock(){
+  const code = codeInput.value;
+  if(!code){ return; }
+  unlockBtn.disabled = true;
+  errorMsg.textContent = '';
+
+  let matched = null;
+  for(const entry of VAULT_ENTRIES){
+    const data = await tryDecrypt(entry, code);
+    if(data){ matched = data; break; }
+  }
+
+  if(matched){
+    dial.classList.add('unlocking');
+    setTimeout(()=>{
+      loginCard.classList.add('hiding');
+      renderVault(matched);
+      vaultView.classList.add('showing');
+      requestAnimationFrame(()=> vaultView.classList.add('in'));
+    }, 350);
+  }else{
+    attempts++;
+    dial.classList.remove('shake'); void dial.offsetWidth; dial.classList.add('shake');
+    errorMsg.textContent = 'Λάθος κωδικός. Δοκιμάστε ξανά.';
+    codeInput.value = '';
+    codeInput.focus();
+    const delay = Math.min(attempts * 400, 3000);
+    await new Promise(r => setTimeout(r, delay));
+    unlockBtn.disabled = false;
+  }
+}
+
+unlockBtn.addEventListener('click', attemptUnlock);
+codeInput.addEventListener('keydown', e => { if(e.key === 'Enter') attemptUnlock(); });
+
+document.getElementById('lock-btn').addEventListener('click', ()=>{
+  window.location.reload();
+});
+
+function copyToClipboard(text, btn){
+  navigator.clipboard.writeText(text).then(()=>{
+    const original = btn.textContent;
+    btn.textContent = 'Αντιγράφηκε';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent = original; btn.classList.remove('copied'); }, 1400);
+  });
+}
+
+function fieldRow(label, value){
+  const row = document.createElement('div');
+  row.className = 'field-row';
+  row.innerHTML = \`<div class="k">\${label}</div><div class="v">\${escapeHtml(value)}</div>\`;
+  const btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.textContent = 'Αντιγραφή';
+  btn.addEventListener('click', ()=> copyToClipboard(value, btn));
+  row.appendChild(btn);
+  return row;
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderVault(data){
+  const fieldsList = document.getElementById('fields-list');
+  fieldsList.innerHTML = '';
+  const base = [];
+  if(data.afm) base.push(['ΑΦΜ', data.afm]);
+  if(data.amka) base.push(['ΑΜΚΑ', data.amka]);
+  (data.extra || []).forEach(f => { if(f.label && f.value) base.push([f.label, f.value]); });
+  if(base.length === 0){
+    fieldsList.innerHTML = '<div class="empty-hint">Δεν έχουν καταχωρηθεί στοιχεία.</div>';
+  }else{
+    base.forEach(([label, value]) => fieldsList.appendChild(fieldRow(label, value)));
+  }
+
+  const filesList = document.getElementById('files-list');
+  filesList.innerHTML = '';
+  const files = data.files || [];
+  if(files.length === 0){
+    filesList.innerHTML = '<div class="empty-hint">Δεν έχουν προστεθεί αρχεία.</div>';
+  }else{
+    files.forEach(f => {
+      const item = document.createElement('div');
+      item.className = 'file-item';
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = f.name || 'Αρχείο';
+      const link = document.createElement('a');
+      link.href = f.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.textContent = 'Άνοιγμα';
+      item.appendChild(name); item.appendChild(link);
+      filesList.appendChild(item);
+    });
+  }
+
+  const notesSection = document.getElementById('notes-section');
+  if(data.notes && data.notes.trim()){
+    document.getElementById('notes-box').textContent = data.notes;
+    notesSection.style.display = 'block';
+  }else{
+    notesSection.style.display = 'none';
+  }
+}
+<\/script>
+</body>
+</html>
+`;
+/* ============================================================================================ */
+
+const PBKDF2_ITERATIONS = 250000;
+
+let members = [];
+let activeId = null;
+
+function uid(){ return 'm_' + Math.random().toString(36).slice(2, 10); }
+
+function newMember(){
+  return { id: uid(), name: 'Νέο μέλος', code:'', afm:'', amka:'', extra:[], files:[], notes:'' };
+}
+
+/* ---------------- sidebar ---------------- */
+function renderSidebar(){
+  const list = document.getElementById('member-list');
+  list.innerHTML = '';
+  members.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'member-item' + (m.id === activeId ? ' active' : '');
+    const label = document.createElement('span');
+    label.textContent = m.name || 'Χωρίς όνομα';
+    const del = document.createElement('span');
+    del.className = 'del'; del.textContent = '✕';
+    del.addEventListener('click', e => {
+      e.stopPropagation();
+      if(confirm(`Διαγραφή του «${m.name}»;`)){
+        members = members.filter(x => x.id !== m.id);
+        if(activeId === m.id) activeId = null;
+        renderSidebar(); renderContent();
+      }
+    });
+    item.appendChild(label); item.appendChild(del);
+    item.addEventListener('click', () => { activeId = m.id; renderSidebar(); renderContent(); });
+    list.appendChild(item);
+  });
+}
+
+/* ---------------- content / form ---------------- */
+function renderContent(){
+  const content = document.getElementById('content');
+  const m = members.find(x => x.id === activeId);
+  if(!m){
+    content.innerHTML = '<div class="placeholder">Επιλέξτε ή προσθέστε ένα μέλος από αριστερά.</div>';
+    return;
+  }
+
+  content.innerHTML = `
+    <div class="field">
+      <label>Όνομα (μόνο για εσάς)</label>
+      <input id="f-name" value="${escapeAttr(m.name)}">
+    </div>
+    <div class="field">
+      <label>Κωδικός θυρίδας</label>
+      <input id="f-code" value="${escapeAttr(m.code)}" placeholder="π.χ. μια φράση ή αριθμοσειρά">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>ΑΦΜ</label>
+        <input id="f-afm" value="${escapeAttr(m.afm)}">
+      </div>
+      <div class="field">
+        <label>ΑΜΚΑ</label>
+        <input id="f-amka" value="${escapeAttr(m.amka)}">
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-head"><h3>Επιπλέον στοιχεία</h3><button class="btn" id="add-extra" style="padding:5px 10px;">+ Πεδίο</button></div>
+      <div id="extra-list"></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-head"><h3>Αρχεία (Google Drive)</h3><button class="btn" id="add-file" style="padding:5px 10px;">+ Αρχείο</button></div>
+      <div id="file-list"></div>
+    </div>
+
+    <div class="subsection">
+      <div class="field">
+        <label>Σημειώσεις</label>
+        <textarea id="f-notes">${escapeHtml(m.notes)}</textarea>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('f-name').addEventListener('input', e => { m.name = e.target.value; renderSidebar(); });
+  document.getElementById('f-code').addEventListener('input', e => { m.code = e.target.value; });
+  document.getElementById('f-afm').addEventListener('input', e => { m.afm = e.target.value; });
+  document.getElementById('f-amka').addEventListener('input', e => { m.amka = e.target.value; });
+  document.getElementById('f-notes').addEventListener('input', e => { m.notes = e.target.value; });
+
+  renderExtra(m);
+  renderFiles(m);
+
+  document.getElementById('add-extra').addEventListener('click', () => {
+    m.extra.push({ label:'', value:'' }); renderExtra(m);
+  });
+  document.getElementById('add-file').addEventListener('click', () => {
+    m.files.push({ name:'', url:'' }); renderFiles(m);
+  });
+}
+
+function renderExtra(m){
+  const wrap = document.getElementById('extra-list');
+  wrap.innerHTML = '';
+  m.extra.forEach((f, i) => {
+    const row = document.createElement('div');
+    row.className = 'repeat-row';
+    row.innerHTML = `
+      <input placeholder="Ετικέτα (π.χ. ΑΔΤ)" value="${escapeAttr(f.label)}" data-k="label">
+      <input placeholder="Τιμή" value="${escapeAttr(f.value)}" data-k="value">
+      <button class="rm">✕</button>
+    `;
+    row.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('input', () => { f[inp.dataset.k] = inp.value; });
+    });
+    row.querySelector('.rm').addEventListener('click', () => { m.extra.splice(i,1); renderExtra(m); });
+    wrap.appendChild(row);
+  });
+}
+
+function renderFiles(m){
+  const wrap = document.getElementById('file-list');
+  wrap.innerHTML = '';
+  m.files.forEach((f, i) => {
+    const row = document.createElement('div');
+    row.className = 'repeat-row';
+    row.innerHTML = `
+      <input placeholder="Όνομα αρχείου" value="${escapeAttr(f.name)}" data-k="name">
+      <input placeholder="URL Google Drive" value="${escapeAttr(f.url)}" data-k="url">
+      <button class="rm">✕</button>
+    `;
+    row.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('input', () => { f[inp.dataset.k] = inp.value; });
+    });
+    row.querySelector('.rm').addEventListener('click', () => { m.files.splice(i,1); renderFiles(m); });
+    wrap.appendChild(row);
+  });
+}
+
+function escapeHtml(str){ const d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML; }
+function escapeAttr(str){ return escapeHtml(str).replace(/"/g,'&quot;'); }
+
+document.getElementById('btn-add-member').addEventListener('click', () => {
+  const m = newMember();
+  members.push(m);
+  activeId = m.id;
+  renderSidebar(); renderContent();
+});
+
+/* ---------------- crypto helpers ---------------- */
+function bytesToB64(bytes){
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+function b64ToBytes(b64){
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+async function deriveKey(password, salt){
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt, iterations:PBKDF2_ITERATIONS, hash:'SHA-256' },
+    baseKey, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+  );
+}
+async function encryptJson(obj, password){
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(password, salt);
+  const enc = new TextEncoder();
+  const ctBuf = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, enc.encode(JSON.stringify(obj)));
+  return { salt: bytesToB64(salt), iv: bytesToB64(iv), ct: bytesToB64(new Uint8Array(ctBuf)) };
+}
+async function decryptJson(entry, password){
+  const salt = b64ToBytes(entry.salt);
+  const iv = b64ToBytes(entry.iv);
+  const key = await deriveKey(password, salt);
+  const ct = b64ToBytes(entry.ct);
+  const plainBuf = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+  return JSON.parse(new TextDecoder().decode(plainBuf));
+}
+
+/* ---------------- password modal ---------------- */
+function askPassword(title, desc){
+  return new Promise(resolve => {
+    const overlay = document.getElementById('overlay');
+    const input = document.getElementById('modal-input');
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-desc').textContent = desc;
+    input.value = '';
+    overlay.classList.add('showing');
+    input.focus();
+
+    function cleanup(val){
+      overlay.classList.remove('showing');
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      input.removeEventListener('keydown', onKey);
+      resolve(val);
+    }
+    const ok = document.getElementById('modal-ok');
+    const cancel = document.getElementById('modal-cancel');
+    function onOk(){ cleanup(input.value || null); }
+    function onCancel(){ cleanup(null); }
+    function onKey(e){ if(e.key === 'Enter') onOk(); if(e.key === 'Escape') onCancel(); }
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+    input.addEventListener('keydown', onKey);
+  });
+}
+
+/* ---------------- status ---------------- */
+function setStatus(msg, kind){
+  let el = document.getElementById('status-msg');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'status-msg';
+    document.querySelector('header').after(el);
+    el.style.padding = '0 26px';
+  }
+  el.textContent = msg;
+  el.className = kind || '';
+}
+
+/* ---------------- backup save / load ---------------- */
+document.getElementById('btn-save-backup').addEventListener('click', async () => {
+  const pw = await askPassword('Κωδικός αντιγράφου', 'Θα χρειαστεί για να ανοίξετε ξανά αυτό το αντίγραφο ασφαλείας.');
+  if(!pw) return;
+  const entry = await encryptJson(members, pw);
+  const blob = new Blob([JSON.stringify(entry)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'family-vault-backup.json';
+  a.click();
+  setStatus('Το αντίγραφο ασφαλείας κατέβηκε.', 'ok');
+});
+
+document.getElementById('btn-load-backup').addEventListener('click', () => {
+  document.getElementById('file-input').click();
+});
+document.getElementById('file-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const text = await file.text();
+  let entry;
+  try{ entry = JSON.parse(text); }catch(err){ setStatus('Μη έγκυρο αρχείο.', 'warn'); return; }
+  const pw = await askPassword('Κωδικός αντιγράφου', 'Εισάγετε τον κωδικό που χρησιμοποιήσατε κατά την αποθήκευση.');
+  if(!pw) return;
+  try{
+    const data = await decryptJson(entry, pw);
+    members = data;
+    activeId = members.length ? members[0].id : null;
+    renderSidebar(); renderContent();
+    setStatus('Το αντίγραφο φορτώθηκε.', 'ok');
+  }catch(err){
+    setStatus('Λάθος κωδικός ή κατεστραμμένο αρχείο.', 'warn');
+  }
+  e.target.value = '';
+});
+
+/* ---------------- export vault.html ---------------- */
+function shuffle(arr){
+  for(let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i+1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/** Χτίζει το κρυπτογραφημένο array entries από τα τρέχοντα μέλη.
+ *  Επιστρέφει null (και έχει ήδη ενημερώσει το status) αν κάτι δεν επιτρέπει εξαγωγή. */
+async function buildEntries(){
+  if(members.length === 0){ setStatus('Δεν υπάρχουν μέλη για εξαγωγή.', 'warn'); return null; }
+
+  const withCode = members.filter(m => m.code && m.code.trim());
+  const skipped = members.filter(m => !m.code || !m.code.trim());
+
+  const codes = withCode.map(m => m.code);
+  const dupes = codes.filter((c, i) => codes.indexOf(c) !== i);
+  if(dupes.length > 0){
+    setStatus('Δύο ή περισσότερα μέλη έχουν τον ίδιο κωδικό — διορθώστε πριν την εξαγωγή.', 'warn');
+    return null;
+  }
+
+  const entries = [];
+  for(const m of withCode){
+    const payload = { afm: m.afm, amka: m.amka, extra: m.extra, files: m.files, notes: m.notes };
+    entries.push(await encryptJson(payload, m.code));
+  }
+  shuffle(entries);
+
+  return { entries, withCode, skipped };
+}
+
+document.getElementById('btn-export').addEventListener('click', async () => {
+  const result = await buildEntries();
+  if(!result) return;
+  const { entries, withCode, skipped } = result;
+
+  const html = VAULT_TEMPLATE.replace('/*__ENTRIES__*/[]', '/*__ENTRIES__*/' + JSON.stringify(entries));
+  const blob = new Blob([html], { type:'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'vault.html';
+  a.click();
+
+  let msg = `Το vault.html δημιουργήθηκε με ${withCode.length} θυρίδα(ες).`;
+  if(skipped.length) msg += ` Παραλείφθηκαν χωρίς κωδικό: ${skipped.map(m=>m.name).join(', ')}.`;
+  setStatus(msg, skipped.length ? 'warn' : 'ok');
+});
+
+document.getElementById('btn-export-entries').addEventListener('click', async () => {
+  const result = await buildEntries();
+  if(!result) return;
+  const { entries, withCode, skipped } = result;
+
+  const blob = new Blob([JSON.stringify(entries)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'entries.json';
+  a.click();
+
+  let msg = `Το entries.json δημιουργήθηκε με ${withCode.length} θυρίδα(ες). Ανέβασέ το στο data/entries.json στο GitHub.`;
+  if(skipped.length) msg += ` Παραλείφθηκαν χωρίς κωδικό: ${skipped.map(m=>m.name).join(', ')}.`;
+  setStatus(msg, skipped.length ? 'warn' : 'ok');
+});
+
+renderSidebar();
+renderContent();
+</script>
+</body>
+</html>
