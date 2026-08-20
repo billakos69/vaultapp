@@ -21,7 +21,7 @@ import java.net.URL
  * ====================================================================
  */
 private const val ENTRIES_URL =
-    "https://raw.githubusercontent.com/USERNAME/REPO/main/data/entries.json"
+    "https://raw.githubusercontent.com/billakos69/vaultapp/main/data/entries.json"
 
 private const val CACHE_FILE_NAME = "entries_cache.json"
 
