@@ -1,0 +1,52 @@
+name: Build APK
+
+# Χτίζει το APK ΜΟΝΟ όταν αλλάζει ο κώδικας της εφαρμογής (φάκελος app/ ή gradle files).
+# Το push νέου data/entries.json ΔΕΝ πυροδοτεί rebuild - η εφαρμογή το τραβάει live.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon
+
+      - name: Set build tag
+        id: vars
+        run: echo "tag=build-$(date +'%Y%m%d-%H%M%S')" >> "$GITHUB_OUTPUT"
+
+      - name: Publish release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: "Θυρίδα Οικογένειας — ${{ steps.vars.outputs.tag }}"
+          files: app/build/outputs/apk/debug/app-debug.apk
+          body: |
+            Αυτόματο build. Κατέβασε το app-debug.apk παρακάτω και εγκατέστησέ το στη συσκευή σου.
