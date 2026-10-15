@@ -201,11 +201,16 @@
     padding:11px 13px; margin-bottom:8px;
   }
   .file-item .name{ font-size:13.5px; }
-  .file-item a{
-    flex-shrink:0; color:#1A1305; background:var(--brass); text-decoration:none;
-    font-size:11.5px; font-weight:600; padding:6px 11px; border-radius:7px;
+  .file-item .actions{ display:flex; gap:7px; flex-shrink:0; }
+  .file-item button{
+    font-family:inherit; font-size:11.5px; font-weight:600; padding:7px 11px; border-radius:7px;
+    cursor:pointer; border:1px solid var(--brass); transition:background .2s ease, color .2s ease;
   }
-  .file-item a:hover{ background:#d6ac63; }
+  .file-item .btn-dl{ color:#1A1305; background:var(--brass); }
+  .file-item .btn-dl:hover{ background:#d6ac63; }
+  .file-item .btn-dl:disabled{ opacity:.6; cursor:default; }
+  .file-item .btn-open{ color:var(--brass); background:transparent; border-color:var(--border); }
+  .file-item .btn-open:hover{ border-color:var(--brass-dim); }
 
   .empty-hint{ color:#565C66; font-size:12.5px; padding:4px 2px; }
 
@@ -421,6 +426,24 @@ function fieldRow(label, value){
   return row;
 }
 
+// Μέσα στην εφαρμογή: native λήψη στο κινητό. Σε απλό browser: ανοίγει τον σύνδεσμο.
+function downloadFile(f, btn){
+  if(window.Android && window.Android.download){
+    window.Android.download(f.url, f.name || '');
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = 'Λήψη…';
+    setTimeout(()=>{ btn.disabled = false; btn.textContent = original; }, 2500);
+  }else{
+    window.open(f.url, '_blank', 'noopener');
+  }
+}
+
+function openFile(f){
+  if(window.Android && window.Android.open){ window.Android.open(f.url); }
+  else{ window.open(f.url, '_blank', 'noopener'); }
+}
+
 function escapeHtml(str){
   const d = document.createElement('div');
   d.textContent = str;
@@ -452,10 +475,21 @@ function renderVault(data){
       const name = document.createElement('div');
       name.className = 'name';
       name.textContent = f.name || 'Αρχείο';
-      const link = document.createElement('a');
-      link.href = f.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
-      link.textContent = 'Άνοιγμα';
-      item.appendChild(name); item.appendChild(link);
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+
+      const dl = document.createElement('button');
+      dl.className = 'btn-dl';
+      dl.textContent = 'Λήψη';
+      dl.addEventListener('click', ()=> downloadFile(f, dl));
+
+      const open = document.createElement('button');
+      open.className = 'btn-open';
+      open.textContent = 'Άνοιγμα';
+      open.addEventListener('click', ()=> openFile(f));
+
+      actions.appendChild(dl); actions.appendChild(open);
+      item.appendChild(name); item.appendChild(actions);
       filesList.appendChild(item);
     });
   }
