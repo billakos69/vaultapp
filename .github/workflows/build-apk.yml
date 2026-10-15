@@ -29,11 +29,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # Ο ubuntu-latest runner έχει ήδη Android SDK (ANDROID_HOME) με αποδεκτές άδειες,
+      # οπότε δεν χρειάζεται το android-actions/setup-android (αποτύγχανε με "Failed to find package 'tools'").
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'   # συμβατό με Android Gradle Plugin 8.5.2
 
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon
